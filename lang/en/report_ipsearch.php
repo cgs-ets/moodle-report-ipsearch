@@ -37,4 +37,5 @@ $string['firstname'] = 'First Name';
 $string['lastname'] = 'Last Name';
 $string ['ipaddress'] = 'IP Address';
 $string['incorrectdaterange'] = 'Incorrect date range';
-$string['selectaddress'] = 'Please choose an IP address';
+$string['missingipaddress'] = 'Please insert an IP address';
+$string['incorrectipaddress'] = 'Incorrect IP address format';

@@ -25,8 +25,7 @@
 
 require(__DIR__.'/../../config.php');
 require_once($CFG->libdir.'/adminlib.php');
-require_once($CFG->dirroot.'/course/lib.php');
-require_once($CFG->dirroot.'/report/log/locallib.php');
+require_once($CFG->dirroot.'/report/ipsearch/classes/searchform.php');
 require_once($CFG->libdir.'/adminlib.php');
 require_once($CFG->dirroot.'/lib/tablelib.php');
 
@@ -34,122 +33,60 @@ require_once($CFG->dirroot.'/lib/tablelib.php');
 admin_externalpage_setup('reportipsearch', '', null, '', array('pagelayout' => 'report'));
 echo $OUTPUT->header();
 
-$url = new moodle_url("/report/ipsearch/index.php");
-
-// Load IP addresses.
-$sql = "SELECT distinct ip FROM {logstore_standard_log}  "
-      . "WHERE timecreated >= " . get_string('startofyear', 'report_ipsearch')
-      . " order by ip asc";
-
-$requestedip = optional_param('address', '', PARAM_TEXT);
-
-$ipaddresses = $DB->get_records_sql($sql);
-$selectoptions = array();
-foreach ($ipaddresses as $i => $ip) {
-    $selectoptions [$i] = $ip->ip;
-}
-
 // Print the settings form.
 echo $OUTPUT->box_start('generalbox boxwidthwide boxaligncenter');
 
 echo html_writer::tag('h1', get_string('pluginname', 'report_ipsearch'), array('class' => 'title'));
 
-echo '<form method = "post" action =' .$url .' id = "settingsform">';
-
-echo html_writer::start_div('inputdata');
-
-echo html_writer::label(get_string('address', 'report_ipsearch'), 'table');
-echo html_writer::select($selectoptions, 'address', $requestedip);
-
-$sql = "SELECT distinct timecreated FROM {logstore_standard_log}"
-    . " WHERE timecreated >=" . get_string('startofyear', 'report_ipsearch')
-    . "  GROUP BY timecreated";
-
-// Dates from and to.
-$timecreated = $DB->get_records_sql($sql);
-$requestedtimefrom = optional_param('table', '', PARAM_TEXT);
-$requestedtimeto = optional_param('table', '', PARAM_TEXT);
-$datefrom = array();
-$dateto = array();
-
-foreach ($timecreated as $i => $ip) {
-    if (!in_array(userdate($ip->timecreated, get_string('strftimedaydate')), $datefrom)) {
-        $datefrom [$i] = userdate($ip->timecreated, get_string('strftimedaydate'));
-        $dateto [$i] = userdate($ip->timecreated, get_string('strftimedaydate'));
-    }
-
-}
-
-echo html_writer::label(get_string('from', 'report_ipsearch'), 'datefrom');
-echo html_writer::select($datefrom, 'datefrom', $requestedtimefrom);
-echo html_writer::label(get_string('to', 'report_ipsearch'), 'dateto');
-echo html_writer::select($dateto, 'dateto', $requestedtimeto);
-
-echo '<input type="submit" class="btn btn-secondary" id="settingssubmit" value="' .get_string('getreport', 'report_ipsearch').'"/>';
-
-echo html_writer::end_div();
-echo '</form>';
+$mform = new ip_search_form();
 
 echo $OUTPUT->box_end();
 
+if (isset($_POST["address"]) && !empty($_POST["address"])) {
 
-if (isset($_POST["address"]) && $_POST["address"] === '') {
-    echo html_writer::start_div('alert alert-danger');
-    echo get_string('selectaddress', 'report_ipsearch');
-    echo html_writer::end_div();
-}
+    $datefrom = new DateTime ($_POST['datefrom']['year'] . '-' . $_POST['datefrom']['month'] . '-' . $_POST['datefrom']['day']);
+    $dateto = new DateTIme ($_POST['dateto']['year'] . '-' . $_POST['dateto']['month'] . '-' . $_POST['dateto']['day']);
+    $ipadress = $_POST["address"];
 
-if ($requestedip) {
-    get_ip_search_results($_POST["address"], (int) $_POST["datefrom"], (int) $_POST["dateto"]);
-}
-
-function get_ip_search_results($ipadress, $datefrom, $dateto) {
-
-    global $DB, $PAGE, $OUTPUT;
-
-    // If any of the dates is not selected. Find the logs from the past two weeks.
-    // $dateFrom = last two weeks $dateto = today.
-
-    if (empty($datefrom) || empty($dateto)) {
-
-        $date = new \DateTime("now");
-        $dateto = $date->getTimestamp();
-
-        $date->modify('-14 day');
-        $datefrom = $date->getTimestamp();
+    // Validate IP Address.
+    if (!filter_var($ipadress, FILTER_VALIDATE_IP)) {
+        echo html_writer::start_div('alert alert-danger');
+        echo get_string('incorrectipaddress', 'report_ipsearch');
+        echo html_writer::end_div();
+        echo $OUTPUT->footer();
+        return;
     }
-
-    $df = new \DateTime();
-    $df->setTimestamp($datefrom);
-    $dt = new \DateTime();
-    $dt->setTimestamp($dateto);
-
-    if (date_diff($df, $dt)->invert == 1) {
+    // Validate date range.
+    if (date_diff($datefrom, $dateto)->invert == 1) {
         echo html_writer::start_div('alert alert-danger');
         echo get_string('incorrectdaterange', 'report_ipsearch');
         echo html_writer::end_div();
+        echo $OUTPUT->footer();
         return;
     }
-    // Get the user  information.
-    $query = 'SELECT distinct firstname, lastname
-              FROM mdl_user  inner join (SELECT userid, origin
-                                         FROM mdl_logstore_standard_log
-                                         WHERE (timecreated BETWEEN ? AND ?) AND ip = ? ) as users
-             ON  mdl_user.id = users.userid';
 
-    $params = array ($datefrom, $dateto, $ipadress);
+    $query = 'SELECT distinct firstname, lastname
+               FROM mdl_user  inner join (SELECT userid, origin
+                                          FROM mdl_logstore_standard_log
+                                          WHERE (timecreated BETWEEN ? AND ?) AND ip = ? ) as users
+               ON  mdl_user.id = users.userid
+               ORDER BY firstname';
+
+    $params = array ($datefrom->getTimestamp(), $dateto->getTimestamp(), $_POST["address"]);
     $results = $DB->get_records_sql($query, $params);
+
 
     if (empty($results)) {
         echo html_writer::start_div('alert alert-info');
         echo get_string('noresults', 'report_ipsearch');
         echo html_writer::end_div();
+        echo $OUTPUT->footer();
         return;
     }
 
     $table = new html_table();
     $table->head = array( get_string('firstname', 'report_ipsearch'),  get_string('lastname', 'report_ipsearch'),
-         get_string('ipaddress', 'report_ipsearch'));
+        get_string('ipaddress', 'report_ipsearch'));
 
     foreach ($results as $i => $user) {
         $table->data [] = array( $user->firstname, $user->lastname, $ipadress);
@@ -159,11 +96,11 @@ function get_ip_search_results($ipadress, $datefrom, $dateto) {
 
     // Add Navigation.
     $url  = new moodle_url("/report/ipsearch/index.php");
-    $page    = optional_param('page', 0, PARAM_INT);
+    $page = optional_param('page', 0, PARAM_INT);
     $perpage = optional_param('perpage', $page, PARAM_INT); // How many per page.
+
     echo $OUTPUT->paging_bar(count($results), $page, $perpage, $url);
 }
-
 
 // Footer.
 echo $OUTPUT->footer();
