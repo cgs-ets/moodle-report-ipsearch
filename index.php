@@ -49,10 +49,12 @@ if (isset($mform->address) && !empty($mform->address)) {
     $datefrom = $mform->datefrom;
     $dateto = $mform->dateto;
     $ipadress = $mform->address;
+    $flag = false;
 
     // When searching on the same day, change time to to get the time range up to now.
     if( $datefrom == $dateto) {
         $dateto = new DateTime('now');
+        $flag = true;
     }
 
     // Validate IP Address.
@@ -67,8 +69,14 @@ if (isset($mform->address) && !empty($mform->address)) {
 
     $df =  new \DateTime();
     $dt = new \DateTime();
+
     $df->setTimestamp($datefrom);
-    $dt->setTimestamp($dateto);
+
+    if (!$flag ){
+        $dt->setTimestamp($dateto);
+    }else{
+        $dt = $dateto;
+    }
 
     if (date_diff($df, $dt)->invert == 1) {
         echo html_writer::start_div('alert alert-danger');
@@ -85,7 +93,7 @@ if (isset($mform->address) && !empty($mform->address)) {
                ON  mdl_user.id = users.userid
                ORDER BY firstname';
 
-    $params = array ($datefrom, $dateto, $mform->address);
+    $params = array ($mform->datefrom, $mform->dateto, $mform->address);
     $results = $DB->get_records_sql($query, $params);
 
 
