@@ -41,7 +41,7 @@ echo html_writer::tag('h1', get_string('pluginname', 'report_ipsearch'), array('
 $mform = new ip_search_form();
 $mform->display();
 $mform = $mform->get_data();
-//var_dump ($mform->datefrom);
+
 echo $OUTPUT->box_end();
 
 if (isset($mform->address) && !empty($mform->address)) {
@@ -49,13 +49,6 @@ if (isset($mform->address) && !empty($mform->address)) {
     $datefrom = $mform->datefrom;
     $dateto = $mform->dateto;
     $ipadress = $mform->address;
-    $flag = false;
-
-    // When searching on the same day, change time to to get the time range up to now.
-    if( $datefrom == $dateto) {
-        $dateto = new DateTime('now');
-        $flag = true;
-    }
 
     // Validate IP Address.
     if (!filter_var($ipadress, FILTER_VALIDATE_IP)) {
@@ -65,18 +58,17 @@ if (isset($mform->address) && !empty($mform->address)) {
         echo $OUTPUT->footer();
         return;
     }
-    // Validate date range.
 
+    // Validate date range.
     $df =  new \DateTime();
     $dt = new \DateTime();
 
     $df->setTimestamp($datefrom);
 
-    if (!$flag ){
-        $dt->setTimestamp($dateto);
-    }else{
-        $dt = $dateto;
-    }
+    // To validate days where the from and to date are the same, cover the entire range time for the day.
+    $dt->setTimestamp($dateto);
+    $dt->format('Y-m-d H : i : s');
+    $dt->setTime(23, 59, 59);
 
     if (date_diff($df, $dt)->invert == 1) {
         echo html_writer::start_div('alert alert-danger');
@@ -89,11 +81,12 @@ if (isset($mform->address) && !empty($mform->address)) {
     $query = 'SELECT distinct firstname, lastname, lastaccess, mdl_user.id
                FROM mdl_user  inner join (SELECT userid, origin
                                           FROM mdl_logstore_standard_log
-                                          WHERE (timecreated BETWEEN ? AND ?) AND ip = ? ) as users
-               ON  mdl_user.id = users.userid
-               ORDER BY firstname';
+                                          WHERE (timecreated BETWEEN :start AND :finish) AND ip = :ipaddress  and origin = "web") as users
+                ON  mdl_user.id = users.userid
+                    where lastaccess != 0
+                 ORDER BY firstname';
 
-    $params = array ($mform->datefrom, $mform->dateto, $mform->address);
+    $params = array ('start' => $mform->datefrom, 'finish' => $mform->dateto, 'ipaddress' => $mform->address);
     $results = $DB->get_records_sql($query, $params);
 
 
