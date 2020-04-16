@@ -78,15 +78,15 @@ if (isset($mform->address) && !empty($mform->address)) {
         return;
     }
 
-    $query = 'SELECT distinct firstname, lastname, lastaccess, mdl_user.id
+    $query = 'SELECT distinct firstname, lastname, lastaccess, mdl_user.id, users.origin
                FROM mdl_user  inner join (SELECT userid, origin
                                           FROM mdl_logstore_standard_log
-                                          WHERE (timecreated BETWEEN :start AND :finish) AND ip = :ipaddress  and origin = "web") as users
+                                          WHERE (timecreated BETWEEN ? AND ? ) AND ip = ? ) as users
                 ON  mdl_user.id = users.userid
                     where lastaccess != 0
                  ORDER BY firstname';
 
-    $params = array ('start' => $mform->datefrom, 'finish' => $mform->dateto, 'ipaddress' => $mform->address);
+    $params = array ($mform->datefrom, $dt->getTimestamp(), $mform->address);
     $results = $DB->get_records_sql($query, $params);
 
 
@@ -99,13 +99,13 @@ if (isset($mform->address) && !empty($mform->address)) {
     }
 
     $table = new html_table();
-    $table->head = array( get_string('user', 'report_ipsearch'), get_string('ipaddress', 'report_ipsearch'), get_string('lastaccess', 'report_ipsearch'));
+    $table->head = array( get_string('user', 'report_ipsearch'), get_string('ipaddress', 'report_ipsearch'), get_string('lastaccess', 'report_ipsearch'), get_string('origin', 'report_ipsearch'));
 
     foreach ($results as $i => $user) {
 
         $userprofile = new \moodle_url('/user/profile.php', array('id' => $user->id));
         $link = html_writer::tag('a', $user->firstname .' ' . $user->lastname, array('href' => $userprofile));
-        $table->data [] = array( $link,  $ipadress,  userdate($user->lastaccess, get_string('strftimedaydate')));
+        $table->data [] = array( $link,  $ipadress,  userdate($user->lastaccess, get_string('strftimedaydate')), ucfirst($user->origin));
     }
 
     echo html_writer::table($table);
