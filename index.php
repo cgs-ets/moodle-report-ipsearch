@@ -100,13 +100,13 @@ if (isset($mform->address) && !empty($mform->address)) {
     }
 
     $table = new html_table();
-    $table->head = array( get_string('user', 'report_ipsearch'), get_string('ipaddress', 'report_ipsearch'), get_string('lastaccess', 'report_ipsearch'), get_string('origin', 'report_ipsearch'));
+    $table->head = array( get_string('user', 'report_ipsearch'), get_string('ipaddress', 'report_ipsearch'), get_string('lastaccess', 'report_ipsearch'));
 
     foreach ($results as $i => $user) {
 
         $userprofile = new \moodle_url('/user/profile.php', array('id' => $user->id));
         $link = html_writer::tag('a', $user->firstname .' ' . $user->lastname, array('href' => $userprofile));
-        $table->data [] = array( $link,  $ipadress,  userdate($user->lastaccess, get_string('strftimedaydate')), ucfirst($user->origin));
+        $table->data [] = array( $link,  $ipadress,  userdate($user->lastaccess, get_string('strftimedaydate')));
     }
 
     echo html_writer::table($table);
