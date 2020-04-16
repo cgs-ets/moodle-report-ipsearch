@@ -44,9 +44,15 @@ echo $OUTPUT->box_end();
 
 if (isset($_POST["address"]) && !empty($_POST["address"])) {
 
-    $datefrom = new DateTime ($_POST['datefrom']['year'] . '-' . $_POST['datefrom']['month'] . '-' . $_POST['datefrom']['day']);
-    $dateto = new DateTIme ($_POST['dateto']['year'] . '-' . $_POST['dateto']['month'] . '-' . $_POST['dateto']['day']);
-    $ipadress = $_POST["address"];
+    $datefrom = new DateTime ($_POST['datefrom']['year'] . '-' . $_POST['datefrom']['month'] . '-' . $_POST['datefrom']['day'] . ' 00:00:00.000');
+    $dateto = new DateTIme ($_POST['dateto']['year'] . '-' . $_POST['dateto']['month'] . '-' . $_POST['dateto']['day'] );
+    $ipadress = $_POST["address"];  
+
+    // When searching on the same day, change time to to get the time range up to now.    
+    if( $datefrom->getTimestamp() == $dateto->getTimestamp()) {
+        $dateto = new DateTime('now');
+    }
+   
 
     // Validate IP Address.
     if (!filter_var($ipadress, FILTER_VALIDATE_IP)) {
