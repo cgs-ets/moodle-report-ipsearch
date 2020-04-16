@@ -78,15 +78,16 @@ if (isset($mform->address) && !empty($mform->address)) {
         return;
     }
 
-    $query = 'SELECT distinct firstname, lastname, lastaccess, mdl_user.id, users.origin
-               FROM mdl_user  inner join (SELECT userid, origin
+    $query = 'SELECT distinct mdl_user.id, firstname, lastname, lastaccess, users.origin
+               FROM mdl_user  inner join (SELECT distinct userid, origin
                                           FROM mdl_logstore_standard_log
-                                          WHERE (timecreated BETWEEN ? AND ? ) AND ip = ? ) as users
+                                          WHERE (timecreated BETWEEN ? AND ? ) AND ip = ? AND origin = ? ) AS users
                 ON  mdl_user.id = users.userid
-                    where lastaccess != 0
+                    WHERE lastaccess != 0 
                  ORDER BY firstname';
 
-    $params = array ($mform->datefrom, $dt->getTimestamp(), $mform->address);
+                 
+    $params = array ($mform->datefrom, $dt->getTimestamp(), $mform->address, "web");
     $results = $DB->get_records_sql($query, $params);
 
 
