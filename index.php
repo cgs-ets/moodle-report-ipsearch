@@ -39,20 +39,21 @@ echo $OUTPUT->box_start('generalbox boxwidthwide boxaligncenter');
 echo html_writer::tag('h1', get_string('pluginname', 'report_ipsearch'), array('class' => 'title'));
 
 $mform = new ip_search_form();
-
+$mform->display();
+$mform = $mform->get_data();
+//var_dump ($mform->datefrom);
 echo $OUTPUT->box_end();
 
-if (isset($_POST["address"]) && !empty($_POST["address"])) {
+if (isset($mform->address) && !empty($mform->address)) {
 
-    $datefrom = new DateTime ($_POST['datefrom']['year'] . '-' . $_POST['datefrom']['month'] . '-' . $_POST['datefrom']['day'] . ' 00:00:00.000');
-    $dateto = new DateTIme ($_POST['dateto']['year'] . '-' . $_POST['dateto']['month'] . '-' . $_POST['dateto']['day'] );
-    $ipadress = $_POST["address"];  
+    $datefrom = $mform->datefrom;
+    $dateto = $mform->dateto;
+    $ipadress = $mform->address;
 
-    // When searching on the same day, change time to to get the time range up to now.    
-    if( $datefrom->getTimestamp() == $dateto->getTimestamp()) {
+    // When searching on the same day, change time to to get the time range up to now.
+    if( $datefrom == $dateto) {
         $dateto = new DateTime('now');
     }
-   
 
     // Validate IP Address.
     if (!filter_var($ipadress, FILTER_VALIDATE_IP)) {
@@ -63,7 +64,13 @@ if (isset($_POST["address"]) && !empty($_POST["address"])) {
         return;
     }
     // Validate date range.
-    if (date_diff($datefrom, $dateto)->invert == 1) {
+
+    $df =  new \DateTime();
+    $dt = new \DateTime();
+    $df->setTimestamp($datefrom);
+    $dt->setTimestamp($dateto);
+
+    if (date_diff($df, $dt)->invert == 1) {
         echo html_writer::start_div('alert alert-danger');
         echo get_string('incorrectdaterange', 'report_ipsearch');
         echo html_writer::end_div();
@@ -71,14 +78,14 @@ if (isset($_POST["address"]) && !empty($_POST["address"])) {
         return;
     }
 
-    $query = 'SELECT distinct firstname, lastname
+    $query = 'SELECT distinct firstname, lastname, lastaccess, mdl_user.id
                FROM mdl_user  inner join (SELECT userid, origin
                                           FROM mdl_logstore_standard_log
                                           WHERE (timecreated BETWEEN ? AND ?) AND ip = ? ) as users
                ON  mdl_user.id = users.userid
                ORDER BY firstname';
 
-    $params = array ($datefrom->getTimestamp(), $dateto->getTimestamp(), $_POST["address"]);
+    $params = array ($datefrom, $dateto, $mform->address);
     $results = $DB->get_records_sql($query, $params);
 
 
@@ -91,11 +98,13 @@ if (isset($_POST["address"]) && !empty($_POST["address"])) {
     }
 
     $table = new html_table();
-    $table->head = array( get_string('firstname', 'report_ipsearch'),  get_string('lastname', 'report_ipsearch'),
-        get_string('ipaddress', 'report_ipsearch'));
+    $table->head = array( get_string('user', 'report_ipsearch'), get_string('ipaddress', 'report_ipsearch'), get_string('lastaccess', 'report_ipsearch'));
 
     foreach ($results as $i => $user) {
-        $table->data [] = array( $user->firstname, $user->lastname, $ipadress);
+
+        $userprofile = new \moodle_url('/user/profile.php', array('id' => $user->id));
+        $link = html_writer::tag('a', $user->firstname .' ' . $user->lastname, array('href' => $userprofile));
+        $table->data [] = array( $link,  $ipadress,  userdate($user->lastaccess, get_string('strftimedaydate')));
     }
 
     echo html_writer::table($table);
