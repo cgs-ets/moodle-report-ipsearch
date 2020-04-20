@@ -48,7 +48,7 @@ if (isset($mform->address) && !empty($mform->address)) {
 
     $datefrom = $mform->datefrom;
     $dateto = $mform->dateto;
-    $ipadress = $mform->address;
+    $ipadress = trim($mform->address);
 
     // Validate IP Address.
     if (!filter_var($ipadress, FILTER_VALIDATE_IP)) {
@@ -83,10 +83,10 @@ if (isset($mform->address) && !empty($mform->address)) {
                                           FROM mdl_logstore_standard_log
                                           WHERE (timecreated BETWEEN ? AND ? ) AND ip = ? AND origin = ? ) AS users
                 ON  mdl_user.id = users.userid
-                    WHERE lastaccess != 0 
+                    WHERE lastaccess != 0
                  ORDER BY firstname';
 
-                 
+
     $params = array ($mform->datefrom, $dt->getTimestamp(), $mform->address, "web");
     $results = $DB->get_records_sql($query, $params);
 
