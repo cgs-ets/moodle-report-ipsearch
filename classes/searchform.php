@@ -43,6 +43,7 @@ class ip_search_form extends moodleform {
 
         $this->add_action_buttons($cancel = false, $submitlabel = get_string('getreport', 'report_ipsearch'));
 
-        //$mform->display();
     }
+
+
 }

@@ -36,3 +36,5 @@ $string['incorrectdaterange'] = 'Incorrect date range';
 $string['missingipaddress'] = 'Please insert an IP address';
 $string['incorrectipaddress'] = 'Incorrect IP address format';
 $string['lastaccess'] = 'Last Access';
+$string['enabledlogstore'] = 'No usable log reader is enabled.';
+$string['externalognotsupported'] = 'not supported.';
